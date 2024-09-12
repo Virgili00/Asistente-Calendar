@@ -1,0 +1,1 @@
+Para utilizarse se debe instalar FFMPEG en el entorno donde se corrrera la aplicacion.
