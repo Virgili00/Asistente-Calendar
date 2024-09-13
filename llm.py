@@ -8,32 +8,50 @@ from langchain_core.messages import SystemMessage
 from langchain_groq import ChatGroq
 import dotenv
 import os
+import datetime
+import re
 groq_api_key = os.environ['GROQ_API_KEY']
 dotenv.load_dotenv()
 
 class LLM:
-    def __init__(self):
+    def __init__(self,promt):
         self.llm = ChatGroq(
-            model="mixtral-8x7b-32768",
+            model="llama3-70b-8192",
             temperature=0,
             max_tokens=None,
             timeout=None,
             max_retries=2)
-            # other
+        self.promt=promt
+        self.fecha=datetime.date.today()
+            
     def setPromt(self,promt):
         messages = [
                 (
         "system",
-        """sos un bot que agenda turnos, te voy a pasar un texto  y vos debes extraer la informacion del texto para agendar el turno.
-        la info que necesitas es: fecha, hora y un titulo para ponerle al evento y debes devolver esa informacion extraida en formato JSON
-        <Ejemplo>
+        f"""
+        Informacion extra
+        fecha actual {self.fecha}
+        Extrae los datos  y proporciona solo el JSON resultante. No incluyas ninguna nota o comentario adicional.
+        respuesta ejemplo:
         
+        "summary": "Reunión de ejemplo",
+        "start": 
+            "dateTime": "2024-09-15T10:00:00-07:00",
+            "timeZone": "America/Los_Angeles",
+        ,
+        "end": 
+            "dateTime": "2024-09-15T11:00:00-07:00",
+            "timeZone": "America/Los_Angeles",
+        
+                
+                )
         """,
                 ),
         ("human", promt),
                     ]
         return messages
-    def invocarLlm(self,promt):
-        respuesta=self.llm.invoke(self.setPromt(promt))
+    def invocarLlm(self):
+        respuesta=self.llm.invoke(self.setPromt(self.promt))
+        print(respuesta.content)
         return respuesta.content
         

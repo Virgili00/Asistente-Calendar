@@ -4,44 +4,83 @@ from dotenv import load_dotenv
 from speech_recognition import Recognizer, AudioFile
 from pydub import AudioSegment
 import io
+from llm import *
+from transcriptor import *
+from settterCalendar import *
+import json
+recognizer=Recognizer()
 
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
+class BotTelegram:
+    def __init__(self):
+        """Inicializa el bot con el token y configura los manejadores."""
+        self.TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+        self.bot = telebot.TeleBot(self.TOKEN)
+        self.configurar_manejadores()
+        self.calendar=SetterCalendar()
+        self.calendar.autenticar()
 
-# Obtener el token del bot desde las variables de entorno
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    def configurar_manejadores(self):
+        """Registra los diferentes manejadores de mensajes."""
+        
+        # Manejador para mensajes de voz
+        @self.bot.message_handler(content_types=['voice'])
+        def manejar_mensaje_voz(message):
+            self.procesar_mensaje_voz(message)
 
-# Crear una instancia del bot
-bot = telebot.TeleBot(TOKEN)
+        # Manejador para mensajes de texto
+        @self.bot.message_handler(content_types=['text'])
+        def manejar_mensaje_texto(message):
+            # Envía un mensaje de respuesta al usuario
+            self.enviarMensaje(message.chat.id, "Hola, ¡recibí tu mensaje!")
 
-# Inicializar el reconocedor de voz
-recognizer = Recognizer()
+    def procesar_mensaje_voz(self, message):
+        try:
+            # Descargar el archivo de audio en memoria
+            print('descarga')
+            file_info = self.bot.get_file(message.voice.file_id)
+            downloaded_file = self.bot.download_file(file_info.file_path)
+            print('descargado')
+            promt=self.transcribirAudio(downloaded_file)
+            print('transcripto')
+            respuesta=self.obtenerRespuesta(promt)
+            print('llm')
+            respuestaJson=self.convertirJson(respuesta)
+            print('json')
+            self.setCalendar(respuestaJson)
+            print('set')
+            self.bot.reply_to(message,'se guardo el evento en el calendar')
+        except Exception as e:
+            self.bot.reply_to(message, f'Error al descargar el audio: {str(e)}')
+            print(e)
 
-# Manejador para mensajes de voz
-@bot.message_handler(content_types=['voice'])
-def handle_voice(message):
-    try:
-        # Descargar el archivo de audio en memoria
-        file_info = bot.get_file(message.voice.file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
+    def enviarMensaje(self, chat_id, mensaje):
+        """Envía un mensaje a un chat específico."""
+        try:
+            self.bot.send_message(chat_id, mensaje)
+        except Exception as e:
+            print(f"Error al enviar el mensaje: {str(e)}")
 
-        # Convertir el archivo descargado (en bytes) a un buffer de memoria
-        audio_bytes = io.BytesIO(downloaded_file)
-
-        # Usar pydub para convertir el archivo de ogg a wav (en memoria)
-        audio = AudioSegment.from_ogg(audio_bytes)
-        wav_io = io.BytesIO()  # Crear un buffer para el archivo wav
-        audio.export(wav_io, format='wav')  # Exportar como wav en memoria
-        wav_io.seek(0)  # Colocar el puntero al principio del archivo de memoria
-
-        # Usar SpeechRecognition para transcribir el audio
-        with AudioFile(wav_io) as source:
-            audio_data = recognizer.record(source)
-            text = recognizer.recognize_google(audio_data, language='es-ES')
-            bot.reply_to(message, f'Transcripción: {text}')
+    def iniciar_bot(self):
+        """Inicia el bot y comienza a escuchar mensajes."""
+        self.bot.polling()
     
-    except Exception as e:
-        bot.reply_to(message, f'Error al transcribir el audio: {str(e)}')
+    def transcribirAudio(self,audio):
+        audioTranscripto=Transcriptor(audio).transcribir()
+        return audioTranscripto
+    def obtenerRespuesta(self,audioTranscripto):
+        respuesta=LLM(audioTranscripto).invocarLlm()
+        return respuesta
+    def convertirJson(self,respuesta):
+        prompt=json.loads(respuesta)
+        return prompt
+    def setCalendar(self,evento):
+        self.calendar.setCalendar(evento)
+    
+# Clase o métodos adicionales para procesar otras lógicas podrían ir aquí
 
-# Iniciar el bot
-bot.polling()
+# Instanciar y ejecutar el bot
+if __name__ == "__main__":
+    bot = BotTelegram()
+    bot.iniciar_bot()
