@@ -37,11 +37,11 @@ class LLM:
         "summary": "Reunión de ejemplo",
         "start": 
             "dateTime": "2024-09-15T10:00:00-07:00",
-            "timeZone": "America/Los_Angeles",
+            "timeZone": "America/Argentina/Buenos_Aires",
         ,
         "end": 
             "dateTime": "2024-09-15T11:00:00-07:00",
-            "timeZone": "America/Los_Angeles",
+            "timeZone": "America/Argentina/Buenos_Aires",
         
                 
                 )

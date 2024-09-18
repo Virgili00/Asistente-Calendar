@@ -29,7 +29,6 @@ class SetterCalendar:
             token.write(creds.to_json())
         return build("calendar","v3",credentials=creds)
     def setCalendar(self,evento):
-        
         try:
             evento = self.servicio.events().insert(calendarId='primary', body=evento).execute()
             return print("se genero con exíto")

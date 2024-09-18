@@ -32,27 +32,19 @@ class BotTelegram:
         # Manejador para mensajes de texto
         @self.bot.message_handler(content_types=['text'])
         def manejar_mensaje_texto(message):
-            # Envía un mensaje de respuesta al usuario
             self.enviarMensaje(message.chat.id, "Hola, ¡recibí tu mensaje!")
 
     def procesar_mensaje_voz(self, message):
         try:
             # Descargar el archivo de audio en memoria
-            print('descarga')
-            file_info = self.bot.get_file(message.voice.file_id)
-            downloaded_file = self.bot.download_file(file_info.file_path)
-            print('descargado')
-            promt=self.transcribirAudio(downloaded_file)
-            print('transcripto')
+            audioDescargado=self.descargarAudio(message)
+            promt=self.transcribirAudio(audioDescargado)
             respuesta=self.obtenerRespuesta(promt)
-            print('llm')
             respuestaJson=self.convertirJson(respuesta)
-            print('json')
             self.setCalendar(respuestaJson)
-            print('set')
-            self.bot.reply_to(message,'se guardo el evento en el calendar')
+            self.bot.reply_to(message,'se guardo el evento en el calendar \n {promt} \n {respuesta}')
         except Exception as e:
-            self.bot.reply_to(message, f'Error al descargar el audio: {str(e)}')
+            self.bot.reply_to(message, f'{str(e)}')
             print(e)
 
     def enviarMensaje(self, chat_id, mensaje):
@@ -64,15 +56,18 @@ class BotTelegram:
 
     def iniciar_bot(self):
         """Inicia el bot y comienza a escuchar mensajes."""
-        self.bot.polling()
-    
-    def transcribirAudio(self,audio):
+        self.bot.polling(non_stop=True)
+    def descargarAudio(self,message):
+        file_info = self.bot.get_file(message.voice.file_id)
+        audioDescargado = self.bot.download_file(file_info.file_path)
+        return audioDescargado
+    def transcribirAudio(self,audio:bytes):
         audioTranscripto=Transcriptor(audio).transcribir()
         return audioTranscripto
-    def obtenerRespuesta(self,audioTranscripto):
+    def obtenerRespuesta(self,audioTranscripto:str):
         respuesta=LLM(audioTranscripto).invocarLlm()
         return respuesta
-    def convertirJson(self,respuesta):
+    def convertirJson(self,respuesta:str):
         prompt=json.loads(respuesta)
         return prompt
     def setCalendar(self,evento):

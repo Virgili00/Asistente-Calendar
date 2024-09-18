@@ -3,7 +3,7 @@ import speech_recognition as sr
 from pydub import AudioSegment
 
 class Transcriptor():
-    def __init__(self,audio):
+    def __init__(self,audio:bytes):
         self.audio=audio
         self.reco = sr.Recognizer()
        
